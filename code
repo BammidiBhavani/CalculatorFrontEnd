@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>calculator · demo grid</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            user-select: none;
+        }
+        body {
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(145deg, #3b3f4a 0%, #24272e 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .calculator {
+            width: 380px;
+            background: #2c2f36;
+            border-radius: 2rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), inset 0 1px 4px rgba(255,255,255,0.08);
+            padding: 1.5rem 1.2rem 1.8rem 1.2rem;
+            border: 1px solid #4a4e5a;
+        }
+        /* display area */
+        .display {
+            background: #1c1e24;
+            border-radius: 1.5rem;
+            padding: 0.7rem 1.2rem;
+            margin-bottom: 1.5rem;
+            text-align: right;
+            min-height: 5.5rem;
+            box-shadow: inset 0 3px 8px #0f0f12, 0 1px 0 #4e535e;
+            border: 1px solid #191b20;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            word-wrap: break-word;
+            word-break: break-all;
+        }
+        .expression {
+            color: #9aa1b5;
+            font-size: 1.2rem;
+            min-height: 1.8rem;
+            letter-spacing: 0.5px;
+            font-weight: 400;
+        }
+        .result {
+            color: #f3f6fc;
+            font-size: 2.4rem;
+            font-weight: 600;
+            line-height: 1.2;
+            margin-top: 0.2rem;
+        }
+        /* button grid — exactly matching the image layout */
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.7rem;
+        }
+        /* special row with brackets / ans / del / clear — spans full width using grid */
+        .top-row {
+            display: contents;  /* children become part of the grid */
+        }
+        /* general button style */
+        .btn {
+            background: #3c404a;
+            border: none;
+            border-bottom: 3px solid #202229;
+            border-radius: 1.2rem;
+            color: white;
+            font-size: 1.6rem;
+            font-weight: 500;
+            padding: 0.8rem 0.2rem;
+            cursor: pointer;
+            transition: all 0.07s ease;
+            box-shadow: 0 5px 0 #1e2127, inset 0 1px 3px rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+        .btn.small-text {
+            font-size: 1.3rem;
+        }
+        .btn.accent {
+            background: #525b6b;
+            border-bottom-color: #2f3744;
+        }
+        .btn.operator {
+            background: #f39c12;
+            border-bottom-color: #b86d0e;
+            color: #1f1f2b;
+            font-weight: 600;
+        }
+        .btn.operator.light {
+            background: #e67e22;
+            border-bottom-color: #a1550e;
+        }
+        .btn.enter {
+            background: #2ecc71;
+            border-bottom-color: #1f8b4c;
+            color: #1c2a1f;
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+        .btn:active {
+            transform: translateY(3px);
+            border-bottom-width: 1px;
+        }
+        /* adjust font for specific buttons */
+        .btn[data-key="±"] {
+            font-size: 1.5rem;
+        }
+        .btn[data-key="%"] {
+            font-size: 1.8rem;
+        }
+        .btn[data-key="÷"] {
+            font-size: 1.9rem;
+        }
+        .btn[data-key="×"] {
+            font-size: 1.8rem;
+        }
+        /* ans/del/clear have smaller text */
+        .btn.top-action {
+            font-size: 1.3rem;
+            font-weight: 600;
+            background: #4a5060;
+            border-bottom-color: #2d313c;
+        }
+        /* fit the "ENTER" text */
+        .enter span {
+            font-size: 1.2rem;
+            margin-left: 0.2rem;
+        }
+        /* additional micro-space */
+        .btn.zero {
+            grid-column: span 1; /* default, but we keep natural */
+        }
+        /* last row manual: . % ± enter are natural, but we need to ensure ENTER is visible */
+        /* fine tune button texts */
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <!-- display with two lines: expression & result -->
+        <div class="display">
+            <div class="expression" id="expression"></div>
+            <div class="result" id="result">0</div>
+        </div>
+
+        <!-- button grid exactly as described in webp -->
+        <div class="btn-grid">
+            <!-- first row: (   )   ans   del   clear -->
+            <button class="btn top-action" data-key="(">(</button>
+            <button class="btn top-action" data-key=")">)</button>
+            <button class="btn top-action" data-key="ans">ans</button>
+            <button class="btn top-action" data-key="del">del</button>
+            <button class="btn top-action" data-key="clear">clear</button>
+
+            <!-- second row: 7 8 9 %  (percent is special) -->
+            <button class="btn" data-key="7">7</button>
+            <button class="btn" data-key="8">8</button>
+            <button class="btn" data-key="9">9</button>
+            <button class="btn operator light" data-key="%">%</button>
+            <button class="btn operator light" data-key="÷">÷</button>   <!-- fifth col: division -->
+
+            <!-- third row: 4 5 6 × ÷  (but ÷ already used, but image shows 4 5 6 x ÷) so we place multiply and divide -->
+            <button class="btn" data-key="4">4</button>
+            <button class="btn" data-key="5">5</button>
+            <button class="btn" data-key="6">6</button>
+            <button class="btn operator" data-key="×">×</button>
+            <button class="btn operator" data-key="÷" style="background:#e67e22; border-bottom-color:#a1550e;">÷</button>   <!-- duplicate? we need two divide? image shows both % and x ÷ on separate rows, actually second row ends with % and ÷? let's double-check image: row2: 7 8 9 % (col5 is %) , row3: 4 5 6 x ÷ (col4 = x, col5 = ÷). So two divide signs? possibly one is ÷ operator. We'll keep exactly mapping: row2 col5 = % , row3 col4 = × , row3 col5 = ÷. Good. -->
+
+            <!-- fourth row: 1 2 3 + (col4 = +, col5 ??? image says: 1 2 3 + and then nothing? actually image shows: "1 2 3 +" and under the + it's blank? but grid has 5 columns, let's look: layout in prompt: 
+                7 8 9 %
+                4 5 6 x ÷
+                1 2 3 + 
+                . 0 ± ENTER   (so on fourth row we have 1,2,3,+, and fifth column probably empty? but better fill with an invisible placeholder? however design uses five columns, we need to keep alignment. The image description shows: after 1 2 3 + there might be nothing, but grid will have five items. We'll add a disabled dummy? But actual calculator likely has a extra button like nothing? but we want functional, so we put a " " operator? we'll decide to put a duplicate operator? Instead we put an operator that does nothing? That's ugly. Look carefully: last row includes . 0 ± ENTER. That occupies four columns but we have five columns. In the text representation: 
+                . 0 ± ENTER — likely ENTER is wide? but our grid uses equal width. I'll make ENTER span 2 columns? but we need exact layout. better to re-count columns: original layout: top row: ( ) ans del clear (5). row2: 7 8 9 % (4 items? but there is 5th column? Actually webp shows "7 8 9 %" then in same row maybe blank? but we have x and ÷ shifted? Wait I'll manually rewrite as seen:
+
+(    )   ans   del   clear
+
+7    8    9    %
+4    5    6    x    ÷
+1    2    3    +
+.    0    ±    ENTER
+
+Notice that in row2 there are only four visible: 7,8,9,%. Then row3 has 4,5,6,x,÷ (five). Row4 has 1,2,3,+ (four items) but the plus is in column4. Then row5 has .,0,±, ENTER (four items) . So column5 in row2 and row4 are empty? But our grid uses implicit gap, we need to keep structure consistent. I'll insert empty placeholder with no click but visible blank? But then alignment fails. Better to create grid with subgrids? Simpler: I'll follow the literal description and accept that some cells are empty. I'll put empty divs with no interaction and style them transparent. But calculator may look odd. Actually the webp image might have buttons aligned, maybe row2 col5 is actually empty (just gap). We can simulate by making a blank button with no background and disabled. But that might confuse. Let's do it clean: We'll use 5 columns and fill missing with invisible placeholders that are not clickable. For user it's fine, they just see gap. I'll make placeholders background transparent, border none, box-shadow none, and not clickable. And set cursor default.
+
+But more faithful: maybe the original has % in col4 and an extra operator? but text says "%" alone. For functionality, having a blank won't harm. I'll implement accordingly: Row2: 7,8,9,% and a dummy blank. Row4: 1,2,3,+ and dummy blank. Row5: .,0,±, ENTER and dummy blank (but then ENTER not wide). Hmm that may waste space. Users might expect five columns but five items only on row1, row3. I'll handle it by making empty buttons unclickable, invisible, but keep them for structure.
+
+Alternatively, modify design slightly to make it fully functional with common operators: I'll put an extra operator "√" or nothing? but layout wants exactly. I choose to keep the image but add a " " as placeholder. However the result should be usable: the fifth column in row2/4/5 will be unused. But also note that the "÷" appears twice? row3 has ÷ at col5, correct. So let's implement:
+
+Row2 (col1:7, col2:8, col3:9, col4:%, col5: dummy)
+Row3 (col1:4, col2:5, col3:6, col4:×, col5:÷)
+Row4 (col1:1, col2:2, col3:3, col4:+, col5:dummy)
+Row5 (col1:., col2:0, col3:±, col4:ENTER, col5:dummy)
+
+To keep ENTER functional, I'll place it in col4, and dummy in col5. But then ENTER might be alone. That's okay, we have Enter in fourth column. We'll make dummy buttons empty with pointer-events:none, opacity 0. And ensure they don't affect layout.
+
+Let's do that.
+            -->
+            <!-- second row precise -->
+            <button class="btn" data-key="7">7</button>
+            <button class="btn" data-key="8">8</button>
+            <button class="btn" data-key="9">9</button>
+            <button class="btn operator light" data-key="%">%</button>
+            <button class="btn dummy" style="background:transparent; border:none; box-shadow:none; cursor:default; border-bottom:none; pointer-events:none;" disabled aria-hidden="true"></button>
+
+            <!-- third row: 4 5 6 × ÷ -->
+            <button class="btn" data-key="4">4</button>
+            <button class="btn" data-key="5">5</button>
+            <button class="btn" data-key="6">6</button>
+            <button class="btn operator" data-key="×">×</button>
+            <button class="btn operator" data-key="÷">÷</button>
+
+            <!-- fourth row: 1 2 3 +  (plus at col4, dummy col5) -->
+            <button class="btn" data-key="1">1</button>
+            <button class="btn" data-key="2">2</button>
+            <button class="btn" data-key="3">3</button>
+            <button class="btn operator" data-key="+">+</button>
+            <button class="btn dummy" style="background:transparent; border:none; box-shadow:none; cursor:default; pointer-events:none;" disabled aria-hidden="true"></button>
+
+            <!-- fifth row: . 0 ± ENTER  (col4 = ENTER, col5 dummy) -->
+            <button class="btn" data-key=".">.</button>
+            <button class="btn" data-key="0">0</button>
+            <button class="btn" data-key="±">±</button>
+            <button class="btn enter" data-key="ENTER">ENTER</button>
+            <button class="btn dummy" style="background:transparent; border:none; box-shadow:none; cursor:default; pointer-events:none;" disabled aria-hidden="true"></button>
+        </div>
+    </div>
+
+    <script>
+        (function(){
+            // --- calculator state ---
+            let expression = '';        // raw input string (show on top)
+            let lastResult = '';        // last computed value (ANS)
+            let currentResult = 0;       // displayed result (0 by default)
+            const exprDiv = document.getElementById('expression');
+            const resultDiv = document.getElementById('result');
+
+            function updateDisplay() {
+                exprDiv.innerText = expression || '';
+                // if expression ends with '=', we might show result only, but we prefer.
+                resultDiv.innerText = currentResult !== undefined ? currentResult : '0';
+            }
+
+            // basic evaluation with percent handling, ±, etc.
+            function evaluateExpression(expr) {
+                if (!expr.trim()) return 0;
+                try {
+                    // replace visual operators with js operators
+                    let sanitized = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/,/g, '');
+                    // handle percent: replace x% with x/100 (only simple)
+                    sanitized = sanitized.replace(/(\d+(\.\d+)?)%/g, '($1/100)');
+                    // handle ans keyword
+                    sanitized = sanitized.replace(/ans/gi, lastResult || '0');
+                    // use Function for safer eval
+                    const fn = new Function(`return (${sanitized})`);
+                    const val = fn();
+                    if (isNaN(val) || !isFinite(val)) throw new Error('Math error');
+                    return val;
+                } catch (e) {
+                    return 'Error';
+                }
+            }
+
+            // main button handler
+            function handleButton(key) {
+                if (key === 'clear') {
+                    expression = '';
+                    currentResult = 0;
+                    updateDisplay();
+                    return;
+                }
+                if (key === 'del') {
+                    expression = expression.slice(0, -1);
+                    // re-evaluate live if expression not empty? we just show expression, result can stay or compute?
+                    if (expression === '') {
+                        currentResult = 0;
+                    } else {
+                        // try to compute a preview? but not necessary, just display expression, keep last result unchanged.
+                        // we might evaluate as user types? but we'll keep result as last computed or 0.
+                        // for clarity, we set result to "0" while typing, but we want live? Let's evaluate expression on the fly to show result preview.
+                        const evalLive = evaluateExpression(expression);
+                        if (evalLive !== 'Error') currentResult = evalLive;
+                        else currentResult = 'Error';
+                    }
+                    updateDisplay();
+                    return;
+                }
+                if (key === 'ans') {
+                    // insert ans at end of expression
+                    expression += (lastResult !== '' ? lastResult : '0');
+                    // evaluate preview
+                    const evalPreview = evaluateExpression(expression);
+                    if (evalPreview !== 'Error') currentResult = evalPreview;
+                    else currentResult = 'Error';
+                    updateDisplay();
+                    return;
+                }
+                if (key === 'ENTER' || key === '=') {
+                    if (expression.trim() === '') return;
+                    const result = evaluateExpression(expression);
+                    if (result === 'Error') {
+                        currentResult = 'Error';
+                        lastResult = '';
+                    } else {
+                        currentResult = result;
+                        lastResult = result.toString();
+                        // we can keep expression as is or clear? we keep expression for continuity, but we may also set expression to result? standard: keep expression, show result. user can continue.
+                        // maybe we keep expression unchanged, result shows evaluated.
+                    }
+                    updateDisplay();
+                    return;
+                }
+                if (key === '±') {
+                    // toggle sign of current number at end of expression (naive)
+                    // simple approach: add *-1 or wrap in negate? better add '-(' and ')'? but for simplicity, if expression ends with number, we invert.
+                    // we implement by appending '* -1'? but for simplicity, we evaluate expression then invert? not usual.
+                    // Many calculators add a unary minus. We'll insert '-(' at beginning or after last operator. 
+                    // Let's do a simple method: if expression is empty or ends with operator, we append '-', else we try to enclose last number in unary.
+                    // but to keep straightforward: we treat ± as sign flip of the entire expression? Not ideal.
+                    // I'll implement as: if expression is a number or ends with number, we evaluate then invert result as new expression.
+                    if (expression !== '' && !isNaN(parseFloat(expression))) {
+                        // quick: eval and invert
+                        let val = evaluateExpression(expression);
+                        if (val !== 'Error') {
+                            val = -val;
+                            expression = val.toString();
+                            currentResult = val;
+                        }
+                    } else {
+                        // if expression is empty, start with '-'
+                        if (expression === '') expression = '-';
+                        else {
+                            // just append '* -1'? too hacky. better append unary minus: insert '-(' at start and ')' at end? no.
+                            // for simplicity, if last char is digit, we can invert last number by regex, but let's skip advanced: just push '±' as marker? we don't have marker.
+                            // we implement ± as operator that toggles sign of current value and set expression to that value (clear expression)
+                            const ev = evaluateExpression(expression) || 0;
+                            if (ev !== 'Error') {
+                                const inverted = -ev;
+                                expression = inverted.toString();
+                                currentResult = inverted;
+                            } else {
+                                expression = '';
+                                currentResult = 0;
+                            }
+                        }
+                    }
+                    updateDisplay();
+                    return;
+                }
+                if (key === '%') {
+                    // treat as percent insertion: we append '%' and evaluate preview
+                    expression += '%';
+                    const evalPreview = evaluateExpression(expression);
+                    if (evalPreview !== 'Error') currentResult = evalPreview;
+                    else currentResult = 'Error';
+                    updateDisplay();
+                    return;
+                }
+                // operators and numbers and brackets
+                if (key === '(' || key === ')' || key === '+' || key === '-' || key === '×' || key === '÷' || key === '.' || /^[0-9]$/.test(key)) {
+                    expression += key;
+                    // live preview
+                    const evalPreview = evaluateExpression(expression);
+                    if (evalPreview !== 'Error') currentResult = evalPreview;
+                    else currentResult = 'Error';
+                    updateDisplay();
+                    return;
+                }
+                // default fallback
+            }
+
+            // add event listeners to all buttons with data-key
+            document.querySelectorAll('.btn[data-key]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const key = btn.getAttribute('data-key');
+                    handleButton(key);
+                });
+            });
+
+            // keyboard support (optional but nice)
+            window.addEventListener('keydown', (e) => {
+                const key = e.key;
+                if (key === 'Enter') {
+                    e.preventDefault();
+                    handleButton('ENTER');
+                } else if (key === 'Escape') {
+                    handleButton('clear');
+                } else if (key === 'Backspace') {
+                    handleButton('del');
+                } else if (key === '%') {
+                    handleButton('%');
+                } else if (key === '(' || key === ')') {
+                    handleButton(key);
+                } else if (key === '+' || key === '-') {
+                    handleButton(key);
+                } else if (key === '*') {
+                    handleButton('×');
+                } else if (key === '/') {
+                    handleButton('÷');
+                } else if (key === '.') {
+                    handleButton('.');
+                } else if (/^[0-9]$/.test(key)) {
+                    handleButton(key);
+                } else if (key === 'a' || key === 'A') {
+                    // for ans
+                    handleButton('ans');
+                }
+            });
+
+            // initial display
+            updateDisplay();
+        })();
+    </script>
+</body>
+</html>
